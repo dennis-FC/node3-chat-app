@@ -10,27 +10,64 @@ const $messages = document.querySelector('#messages')
 //Template
 const messageTemplate = document.querySelector('#message-template').innerHTML
 const locationTemplate = document.querySelector('#location-message-template').innerHTML
+const sidebarTemplate = document.querySelector('#sidebar-template').innerHTML
 
 //Option
 const { username, room} = Qs.parse(location.search, { ignoreQueryPrefix:true}) // ignoreQueryPrefix:true --> ? goes away
+
+const autoscroll = () => {
+    // New message element
+    const $newMessage = $messages.lastElementChild
+
+    // Height of the new message
+    const newMessageStyles = getComputedStyle($newMessage)
+    const newMessageMargin = parseInt(newMessageStyles.marginBottom)
+    const newMessageHeight = $newMessage.offsetHeight + newMessageMargin
+
+    // Visable height
+    const visibleHeight = $messages.offsetHeight
+
+    // Height of messages container
+    const containerHeight = $messages.scrollHeight
+
+    // How far have I scrolled?
+    const scrollOffset = ($messages.scrollTop + visibleHeight)+2
+
+    if(containerHeight - newMessageHeight <= scrollOffset) {  //if we were in the bottom before new message send
+        $messages.scrollTop = $messages.scrollHeight  //autoscroll
+    }
+}
 
 
 socket.on('message',(message) => {
     console.log(message)
     const html = Mustache.render(messageTemplate,{
+        username: message.username,
         message: message.text,
         createdAt: moment(message.createdAt).format('HH:mm a')
     })
     $messages.insertAdjacentHTML('beforeend',html)
+    autoscroll()
 })
 
 socket.on('locationMessage',(message) => {
     console.log(message)
     const html = Mustache.render(locationTemplate,{
+        username:message.username,
         url:message.url,
         createdAt: moment(message.createdAt).format('HH:mm a')
     })
     $messages.insertAdjacentHTML('beforeend',html)
+    //autoscroll()
+})
+
+
+socket.on('roomData',({room, users}) => {
+    const html = Mustache.render(sidebarTemplate, {
+        room,
+        users
+    })
+    document.querySelector('#sidebar').innerHTML = html
 })
 
 $messageForm.addEventListener('submit', (e) => {
